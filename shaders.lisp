@@ -1,0 +1,46 @@
+(in-package #:shaders)
+
+(defun define-compila-shader (shader-program tipo codigo)
+  (let ((shader (create-shader tipo)))
+    (shader-source shader codigo)
+    (compile-shader shader)
+    (unless (get-shader shader :compile-status)
+      (let ((error-str (get-shader-info-log shader)))
+	(log:error "~S ~S" tipo error-str)
+	(error "~A" (get-shader-info-log shader))))
+    (attach-shader shader-program shader)
+    shader))
+
+(defun define-shaders (shader-program shaders)
+  (mapcar (lambda (shader)
+	    (define-compila-shader shader-program (car shader)
+	      (cadr shader)))
+	  shaders))
+
+(defmacro con-shader ((shader-program shaders) &body body)
+  `(let ((,shader-program (create-program)))
+     (define-shaders ,shader-program
+         (list ,@(mapcar (lambda (shader)
+                           `(list ,(car shader) (list ,(caadr shader))))
+                         shaders)))
+     (link-program ,shader-program)
+     (use-program ,shader-program)
+     ,@body))
+
+(defmacro compila-shader (vshader fshader)
+  (alexandria:with-gensyms (g-program)
+    `(con-shader (,g-program ((:vertex-shader (,vshader))
+                              (:fragment-shader (,fshader))))
+       ,g-program)))
+
+(defun lee-shader-de-archivo (ruta)
+  "Abre un archivo, lo lee y regresa una cadena con su contenido."
+  (declare (optimize (speed 3)))
+  (if (probe-file ruta)
+      (handler-case
+	  (with-open-file (archivo ruta :direction :input)
+	    (let ((seq (make-string (file-length archivo))))
+	      (read-sequence seq archivo)
+	      seq))
+	(error (c) (warn "Alerta(lee-shader-de-archivo): ~A" c)))
+      (error "Error(lee-shader-de-archivo): el archivo ~S no existe" (namestring ruta))))

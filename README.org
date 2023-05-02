@@ -1,0 +1,10 @@
+#+AUTHOR José M. Á. Ronquillo Rivera
+
+* minskytron-gl
+
+This is a project to do ... something.
+
+** License
+
+GPLv3
+
