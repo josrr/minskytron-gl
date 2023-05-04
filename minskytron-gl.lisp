@@ -21,9 +21,10 @@ uniform mat4 model;
 uniform mat4 view;
 uniform mat4 proj;
 uniform vec3 color;
+uniform float size = 3.0;
 
 void main() {
-  gl_PointSize=3.0;
+  gl_PointSize=size;
   Color = color;
   gl_Position = proj*view*model*vec4(posicion, 0.0, 1.0);
 }")
@@ -34,6 +35,12 @@ in vec3 Color;
 out vec4 outColor;
 
 void main() {
+  //vec2 pos = mod(gl_PointCoord.xy, vec2(10.0)) - vec2(5.00);
+  //float dist_squared = dot(pos,pos);
+  //outColor = (dist_squared < 49.00)
+  vec2 coord = 2.0 * gl_PointCoord - 1.0;
+  if ( dot(coord, coord) > 1.0 )
+    discard;
   outColor = vec4(Color, 1.0);
 }")
 
@@ -48,11 +55,12 @@ void main() {
    (u-view :initarg :view :accessor minskytron-u-view)
    (u-proy :initarg :proy :accessor minskytron-u-proy)
    (u-color :initarg :color :accessor minskytron-u-color)
+   (u-size :initarg :size :accessor minskytron-u-size)
    (data :initarg :data :accessor minskytron-data)))
 
 (defun make-minskytron (num-points width height)
-  (let* ((program (shaders:compila-shader *minskytron-v-shader*
-                                          *minskytron-f-shader*))
+  (let* ((program (shaders:compile-shaders *minskytron-v-shader*
+                                           *minskytron-f-shader*))
          (med-width (/ width 2f0))
          (med-height (/ height 2f0))
          (*first-time* t)
@@ -60,11 +68,12 @@ void main() {
                            :num-points num-points
                            :program program
                            :pos (get-attrib-location program "posicion")
-                           :points (alloc-gl-array :float (* num-points 6))
+                           :points (alloc-gl-array :float (+ (* num-points 6) 36))
                            :model (get-uniform-location program "model")
                            :view (get-uniform-location program "view")
                            :proy (get-uniform-location program "proj")
                            :color (get-uniform-location program "color")
+                           :size (get-uniform-location program "size")
                            :data (gen-minskytron-pars))))
     (bind-vertex-array (obj-vao m))
     (bind-frag-data-location program 0 "outColor")
@@ -75,7 +84,6 @@ void main() {
                                                0.0001 3000.0)
                         nil)
     (uniform-matrix-4fv (minskytron-u-model m) (rtg-math.matrix4:identity) nil)
-    (uniformf (minskytron-u-color m) 0.3 0.9 0.8)
     (bind-buffer :array-buffer (obj-vbo m))
     (enable-vertex-attrib-array (obj-pos m))
     (vertex-attrib-pointer (obj-pos m) 2 :float :false 8 0)
@@ -91,15 +99,35 @@ void main() {
 
 (defmethod draw-obj ((obj minskytron) &optional texture)
   (declare (ignore texture))
-  (bind-framebuffer :framebuffer (minskytron-fb obj))
-  (use-program (obj-program obj))
-  (bind-vertex-array (obj-vao obj))
-  (opengl:clear :color-buffer-bit)
-  (gen-minskytron (minskytron-points obj)
-                  (minskytron-data obj)
-                  (minskytron-num-points obj))
-  (buffer-data :array-buffer :static-draw (minskytron-points obj))
-  (draw-arrays :points 0 (* 3 (minskytron-num-points obj)))
+  (flet ((draw-words (words)
+           (loop for word in words
+                 for j from 0
+                 for idx from (* 6 (minskytron-num-points obj))
+                   below (+ (* (minskytron-num-points obj) 6) 36) by 6
+                 do (loop for i from 2 downto 0
+                          for bit = (ldb (byte 1 i) (1- word))
+                          if (= 1 bit) do
+                            (setf (glaref (minskytron-points obj) (+   idx (* 2 i))) (+ (* 48 j) (* -12 i) 200f0)
+                                  (glaref (minskytron-points obj) (+ 1 idx (* 2 i))) -488f0)
+                          else do
+                            (setf (glaref (minskytron-points obj) (+   idx (* 2 i))) 512f0
+                                  (glaref (minskytron-points obj) (+ 1 idx (* 2 i))) 512f0)))))
+    (bind-framebuffer :framebuffer (minskytron-fb obj))
+    (use-program (obj-program obj))
+    (bind-vertex-array (obj-vao obj))
+    (opengl:clear :color-buffer-bit)
+    (gen-minskytron (minskytron-points obj)
+                    (minskytron-data obj)
+                    (minskytron-num-points obj))
+    (draw-words (subseq (minskytron-data obj) 0 6))
+    (buffer-data :array-buffer :static-draw (minskytron-points obj))
+    (let ((num-points (* 3 (minskytron-num-points obj))))
+      (uniformf (minskytron-u-color obj) 0.3 0.9 0.8)
+      (uniformf (minskytron-u-size obj) 4.0)
+      (draw-arrays :points 0 num-points)
+      (uniformf (minskytron-u-color obj) 0.4 1.0 0.9)
+      (uniformf (minskytron-u-size obj) 12.0)
+      (draw-arrays :points num-points 18)))
   (minskytron-bf obj))
 
 (defun minskytron-restart (minskytron)
@@ -167,7 +195,7 @@ void main()
    (tex-coords :initarg :tex-coords :accessor quad-tex-coords)))
 
 (defun make-quad ()
-  (let* ((program (shaders:compila-shader *quad-v-shader* *quad-f-shader*))
+  (let* ((program (shaders:compile-shaders *quad-v-shader* *quad-f-shader*))
          (quad (make-instance 'quad
                               :program program
                               :pos (get-attrib-location program "aPos")
@@ -208,7 +236,7 @@ void main()
         (opengl:viewport 0 0 *width* *height*)
         (let ((quad (make-quad))
               (minskytron (make-minskytron 64 *width* *height*)))
-          (enable :blend :program-point-size)
+          (enable :blend :program-point-size :point-sprite)
           (blend-func :one :one-minus-src-alpha)
           (bind-framebuffer :framebuffer 0)
           (clear-color 0.0 0.0 0.0 1.0)
