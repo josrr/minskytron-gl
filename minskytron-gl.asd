@@ -1,9 +1,9 @@
 ;;;; minskytron-gl.asd
 
 (asdf:defsystem #:minskytron-gl
-  :description "Describe minskytron-gl here"
-  :author "Your Name <your.name@example.com>"
-  :license  "Specify license here"
+  :description "Minskytron implementation using SDL and OpenGL"
+  :author "José M. Á. Ronquillo Rivera <josrr@ymail.com>"
+  :license  "GPLv3"
   :version "0.0.1"
   :serial t
   :depends-on (#:uiop
