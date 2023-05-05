@@ -7,4 +7,5 @@
            #:read-shader-from-file))
 
 (defpackage #:minskytron-gl
-  (:use #:cl #:cl-opengl))
+  (:use #:cl #:cl-opengl)
+  (:export #:minskytron))
