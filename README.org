@@ -1,7 +1,5 @@
-#+TITLE: minskytron-gl: Minskytron implementation using SDL and OpenGL
+#+TITLE: MINSKYTRON-GL
 #+AUTHOR: José M. Á. Ronquillo Rivera
-
-* minskytron-gl
 
 Minskytron implementation using SDL and OpenGL.
 
