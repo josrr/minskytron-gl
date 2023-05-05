@@ -1,10 +1,50 @@
-#+AUTHOR José M. Á. Ronquillo Rivera
+#+TITLE: minskytron-gl: Minskytron implementation using SDL and OpenGL
+#+AUTHOR: José M. Á. Ronquillo Rivera
 
 * minskytron-gl
 
-This is a project to do ... something.
+Minskytron implementation using SDL and OpenGL.
 
-** License
+* License
 
 GPLv3
 
+* Screenshots
+
+#+NAME:   fig:sc01
+[[./001.png]]
+
+* How to run the program
+
+To run the program, clone [[https://github.com/josrr/minskytron-gl][this]] repository in your Quicklisp
+=local-projects= director
+yd
+#+BEGIN_SRC
+ $ cd ~/quicklisp/local-projects/
+ $ git clone https://github.com/josrr/minskytron-gl.git
+#+END_SRC
+
+then:
+
+#+BEGIN_SRC
+ $ sbcl
+ This is SBCL 2.3.3, an implementation of ANSI Common Lisp.
+ More information about SBCL is available at <http://www.sbcl.org/>.
+
+ SBCL is free software, provided as is, with absolutely no warranty.
+ It is mostly in the public domain; some portions are provided under
+ BSD-style licenses.  See the CREDITS and COPYING files in the
+ distribution for more information.
+ * (ql:register-local-projects)
+ NIL
+ * (ql:quickload "minskytron-gl")
+ To load "minskytron-gl":
+   Load 1 ASDF system:
+     minskytron-gl
+ ; Loading "minskytron-gl"
+ ..................................................
+ [package shaders].................................
+ [package minskytron-gl].....
+ ("minskytron-gl")
+ * (minskytron-gl:minskytron)
+#+END_SRC
