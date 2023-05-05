@@ -99,35 +99,46 @@ void main() {
 
 (defmethod draw-obj ((obj minskytron) &optional texture)
   (declare (ignore texture))
-  (flet ((draw-words (words)
-           (loop for word in words
-                 for j from 0
-                 for idx from (* 6 (minskytron-num-points obj))
-                   below (+ (* (minskytron-num-points obj) 6) 36) by 6
-                 do (loop for i from 2 downto 0
-                          for bit = (ldb (byte 1 i) (1- word))
-                          if (= 1 bit) do
-                            (setf (glaref (minskytron-points obj) (+   idx (* 2 i))) (+ (* 48 j) (* -12 i) 200f0)
-                                  (glaref (minskytron-points obj) (+ 1 idx (* 2 i))) -488f0)
-                          else do
-                            (setf (glaref (minskytron-points obj) (+   idx (* 2 i))) 512f0
-                                  (glaref (minskytron-points obj) (+ 1 idx (* 2 i))) 512f0)))))
-    (bind-framebuffer :framebuffer (minskytron-fb obj))
-    (use-program (obj-program obj))
-    (bind-vertex-array (obj-vao obj))
-    (opengl:clear :color-buffer-bit)
-    (gen-minskytron (minskytron-points obj)
-                    (minskytron-data obj)
-                    (minskytron-num-points obj))
-    (draw-words (subseq (minskytron-data obj) 0 6))
-    (buffer-data :array-buffer :static-draw (minskytron-points obj))
-    (let ((num-points (* 3 (minskytron-num-points obj))))
-      (uniformf (minskytron-u-color obj) 0.3 0.9 0.8)
-      (uniformf (minskytron-u-size obj) 4.0)
-      (draw-arrays :points 0 num-points)
-      (uniformf (minskytron-u-color obj) 0.4 1.0 0.9)
-      (uniformf (minskytron-u-size obj) 12.0)
-      (draw-arrays :points num-points 18)))
+  (let ((high-bits 0)
+        (low-bits 0)
+        (idx-bits (* 6 (minskytron-num-points obj))))
+    (labels ((add-bit-points (points)
+               (loop for px in points
+                     do (setf (glaref (minskytron-points obj)      idx-bits) px
+                              (glaref (minskytron-points obj) (1+ idx-bits)) -488f0)
+                        (incf idx-bits 2)))
+             (draw-words (words)
+               (loop with high-points = nil and low-points = nil
+                     for word in words
+                     for w from 0 by 56
+                     do (loop for i from 2 downto 0
+                              for pos-x = (+ w (* -15 i) 200f0)
+                              if (= 1 (ldb (byte 1 i) (1- word))) do
+                                (incf high-bits)
+                                (push pos-x high-points)
+                              else do
+                                (incf low-bits)
+                                (push pos-x low-points))
+                     finally (add-bit-points high-points)
+                             (add-bit-points low-points))))
+      (bind-framebuffer :framebuffer (minskytron-fb obj))
+      (use-program (obj-program obj))
+      (bind-vertex-array (obj-vao obj))
+      (opengl:clear :color-buffer-bit)
+      (gen-minskytron (minskytron-points obj)
+                      (minskytron-data obj)
+                      (minskytron-num-points obj))
+      (draw-words (subseq (minskytron-data obj) 0 6))
+      (buffer-data :array-buffer :static-draw (minskytron-points obj))
+      (let ((num-points (* 3 (minskytron-num-points obj))))
+        (uniformf (minskytron-u-color obj) 0.3 0.9 0.8)
+        (uniformf (minskytron-u-size obj) 2.0)
+        (draw-arrays :points 0 num-points)
+        (uniformf (minskytron-u-color obj) 0.1 1.0 0.25)
+        (uniformf (minskytron-u-size obj) 14.0)
+        (draw-arrays :points num-points high-bits)
+        (uniformf (minskytron-u-color obj) 0.05 0.25 0.125)
+        (draw-arrays :points (+ high-bits num-points) low-bits))))
   (minskytron-bf obj))
 
 (defun minskytron-restart (minskytron)

@@ -76,7 +76,7 @@
                 (or values (list #o757777 0 0 #o040000 #o020000 0))))))
 
 (defun gen-minskytron (points data &optional (max-iter 1024))
-  (declare (optimize (speed 3) (safety 1) (debug 3))
+  (declare (optimize (speed 3) (safety 1) (debug 0))
            (type fixnum max-iter)
            (type list data))
   (flet ((draw-point (idx x y)
@@ -116,3 +116,4 @@
 ;;;; 5 6 7 8 4 5
 ;;;; 6 6 2 4 7 8
 ;;;; 1 4 7 7 3 5
+;;;; 5 5 3 3 8 8
